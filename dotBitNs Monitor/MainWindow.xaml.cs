@@ -3,6 +3,7 @@
 // Author: Derrick Slopey derrick@alienseed.com
 // March 4, 2014
 
+using dotBitNs;
 using dotBitNs_Monitor.WPFControls;
 using System;
 using System.Collections.Generic;
@@ -58,7 +59,8 @@ namespace dotBitNs_Monitor
 
             productInfoManager = new ProductInfoManager();
 
-            NmcConfigSettings.ConfigUpdated += NmcConfigSetter_ConfigUpdated;
+            ConfigFile.ConfigUpdated += NmcConfigSetter_ConfigUpdated;
+            ConfigFile.NamecoinConfigInfo += NmcConfigSettings_NameCoinConfigInfo;
             NmcConfigSettings.ValidateNmcConfig();
 
             Program.OnAdditionalInstanceSignal += OnRequestShow;
@@ -69,19 +71,32 @@ namespace dotBitNs_Monitor
             this.StateChanged += MainWindow_StateChanged;
 
             MyNotifyIcon.DoubleClickCommandParameter = MyNotifyIcon;
+
+
+            this.Loaded += MainWindow_Loaded;
+        }
+
+        void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (true.Equals(ConfigurationManager.Instance.StartMin))
+                Dispatcher.Invoke(() =>
+                {
+                    this.WindowState = System.Windows.WindowState.Minimized;
+                    this.ShowInTaskbar = false.Equals(ConfigurationManager.Instance.MinToTray);
+                });
         }
 
         void MainWindow_StateChanged(object sender, EventArgs e)
         {
             var window = sender as MainWindow;
             if (window != null)
-                window.ShowInTaskbar = window.WindowState != System.Windows.WindowState.Minimized;
+                window.ShowInTaskbar = false.Equals(ConfigurationManager.Instance.MinToTray) || window.WindowState != System.Windows.WindowState.Minimized;
         }
 
-        bool AllowExit=false;
+        bool IsExplicitExit=false;
         public void Exit()
         {
-            AllowExit=true;
+            IsExplicitExit=true;
             Close();
         }
 
@@ -105,7 +120,7 @@ namespace dotBitNs_Monitor
 
         void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (!AllowExit)
+            if (true.Equals(ConfigurationManager.Instance.MinOnClose) && !IsExplicitExit)
             {
                 this.Hide();
                 e.Cancel = true;
@@ -123,7 +138,7 @@ namespace dotBitNs_Monitor
 
         private void OnRequestShow(object sender, EventArgs e)
         {
-            Dispatcher.Invoke(EnsureVisible);
+            Dispatcher.Invoke(new Action(EnsureVisible));
         }
 
         public void EnsureVisible()
@@ -152,6 +167,12 @@ namespace dotBitNs_Monitor
         void NmcConfigSetter_ConfigUpdated()
         {
             txtNameCoinInfo.Text = "NameCoin config updated: restart wallet.";
+        }
+
+        void NmcConfigSettings_NameCoinConfigInfo(string status, bool important)
+        {
+            if (important)
+                txtNameCoinInfo.Text = status;
         }
 
         void serviceMonitor_SystemGoChanged(object sender, ServiceMonitor.SystemGoEventArgs e)
@@ -326,28 +347,28 @@ namespace dotBitNs_Monitor
         private void tbtnInstall_Elapsed(object sender, ElapsedEventArgs e)
         {
             ((Timer)sender).Stop();
-            Dispatcher.Invoke(() => { btnInstall.IsEnabled = true; });
+            Dispatcher.Invoke(new Action(() => { btnInstall.IsEnabled = true; }));
             btnInstall.ToolTip = "";
         }
 
         void tbtnStart_Elapsed(object sender, ElapsedEventArgs e)
         {
             ((Timer)sender).Stop();
-            Dispatcher.Invoke(() => { btnStart.IsEnabled = true; });
+            Dispatcher.Invoke(new Action(() => { btnStart.IsEnabled = true; }));
             btnStart.ToolTip = "";
         }
 
         private void tbtnStop_Elapsed(object sender, ElapsedEventArgs e)
         {
             ((Timer)sender).Stop();
-            Dispatcher.Invoke(() => { btnStop.IsEnabled = true; });
+            Dispatcher.Invoke(new Action(() => { btnStop.IsEnabled = true; }));
             btnStop.ToolTip = "";
         }
 
         private void tbtnAutostart_Elapsed(object sender, ElapsedEventArgs e)
         {
             ((Timer)sender).Stop();
-            Dispatcher.Invoke(() => { btnAutostart.IsEnabled = true; });
+            Dispatcher.Invoke(new Action(() => { btnAutostart.IsEnabled = true; }));
         }
 
         private void MyNotifyIcon_TrayContextMenuOpen(object sender, System.Windows.RoutedEventArgs e)
